@@ -1,158 +1,17 @@
 #include "missions.lua"
 
-local RenderScaleOptions = {
-	1,
-	5,
-	10,
-	25,
-	50,
-	75,
-	100,
-	125,
-	150,
-	175,
-	200,
-	250,
-	300,
-	400,
-	500
-}
-
-
-
--- returns the highest value that is lower than the current render scale
-function NextLowerRSOption()
-	local Highest = 0
-	local Current = GetInt ("TEMP.renderscale")
-	if Current <= RenderScaleOptions[1] then
-		return RenderScaleOptions[#RenderScaleOptions]
-	end
-	for _,v in ipairs (RenderScaleOptions) do
-		if v < Current then
-			Highest = v
-		else
-			return Highest
-		end
-	end
-end
-
-
-
--- returns the lowest value that is higher than the current render scale
-function NextHigherRSOption()
-	local Current = GetInt ("TEMP.renderscale")
-	for _,v in ipairs (RenderScaleOptions) do
-		if v > Current then
-			return v
-		end
-	end
-	return RenderScaleOptions[1]
-end
-
-
-
--- this works just like the original RS button
-function GetNextRSOption()
-	local CurrentRS = GetInt("options.gfx.renderscale")
-	-- goes from highest (100%) to lowest (50%)
-	--[[
-		  0-49 -> 50
-		    50 -> 100
-		 51-75 -> 50
-		76-100 -> 75
-		   100+-> 100
-	--]]
-	if CurrentRS < 50 then
-		return 50
-	elseif CurrentRS == 50 then
-		return 100
-	elseif CurrentRS <= 75 then
-		return 50
-	elseif CurrentRS <= 100 then
-		return 75
-	else
-		return 100
-	end
-end
-
-
-
-
-
--- intercept SetInt and GetInt to add "TEMP." settings that are stored in TempSettings
-
-local TempSettings = {}
-
-local OrigSetInt = SetInt
-local OrigGetInt = GetInt
-
-SetInt = function (Setting, Value)
-	if Setting:sub(1,5) == "TEMP." then
-		TempSettings [Setting] = Value
-	else
-		OrigSetInt (Setting, Value)
-	end
-end
-
-GetInt = function (Setting)
-	if Setting:sub(1,5) == "TEMP." then
-		return TempSettings [Setting]
-	else
-		return OrigGetInt (Setting)
-	end
-end
-
-
-
--- set temp to actual renderscale
-SetInt ("TEMP.renderscale", GetInt ("options.gfx.renderscale"))
-
-
-
-
-
--- misc functions used in optionsSlider
-
-function clamp (Val, Min, Max)
-	return (Val <= Min and Min) or (Val >= Max and max) or Val
-end
-
-function map (Val, InStart, InEnd, OutStart, OutEnd)
-	return (Val - InStart) / (InEnd - InStart) * (OutEnd - OutStart) + OutStart
-end
-
--- maps Val and clamps it to the output range
-function mapClamp (Val, InStart, InEnd, OutStart, OutEnd)
-	local Mapped = map (Val, InStart, InEnd, OutStart, OutEnd)
-	local Clamped = clamp (Mapped, OutStart, OutEnd)
-	return Clamped
-end
-
-
-
-
-
-
-
-
-
-
-function optionsSlider(setting, def, min, max)
+function optionsSlider(setting, def, mi, ma)
 	UiColor(1,1,0.5)
 	UiPush()
 		UiTranslate(0, -8)
 		local val = GetInt(setting)
-		val = mapClamp (val, min, max, 0, 1)
-		local width = 100
-		UiRect(width, 3)
+		val = (val-mi) / (ma-mi)
+		local w = 100
+		UiRect(w, 3)
 		UiAlign("center middle")
-		local valBefore = val
-		val = UiSlider("common/dot.png", "x", val*width, 0, width) / width
-		local valAfter = val
-		val = math.floor(map (val, 0, 1, min, max))
-		if valBefore ~= valAfter then
-			SetInt(setting, val)
-		end
+		val = UiSlider("common/dot.png", "x", val*w, 0, w) / w
+		val = math.floor(val*(ma-mi)+mi)
+		SetInt(setting, val)
 	UiPop()
 	return val
 end
@@ -406,53 +265,28 @@ function drawOptions(scale, allowDisplayChanges)
 			end
 
 			if optionsTab == "gfx" then
-				
 				UiPush()
 					toolTip("Scale the resolution by this amount when rendering the game. Text overlays will still show in full resolution. Lowering this setting will dramatically increase performance on most systems.")
-					UiText("Render Scale:")
+					UiText("Render scale")
 					UiTranslate(x1, 0)
 					UiAlign("left")
-					local val = optionsSlider("TEMP.renderscale", 100, 50, 150)
-					UiTranslate(120, 0)
-					UiText(GetInt("TEMP.renderscale") .. "%")
-				UiPop()
-				UiTranslate(0, lh)
-				
-				UiPush()
-					if UiTextButton("Lower") then
-						SetInt("TEMP.renderscale", NextLowerRSOption())
-					end
-					UiTranslate(x1, 0)
-					UiAlign("left")
-					if UiTextButton("Raise") then
-						SetInt("TEMP.renderscale", NextHigherRSOption())
-					end
-				UiPop()
-				UiTranslate(0, lh)
-				
-				UiPush()
-					UiText("Current Render Scale:")
-					UiTranslate(x1, 0)
-					UiAlign("left")
-					if UiTextButton(GetInt("options.gfx.renderscale") .. "%") then
-						SetInt("options.gfx.renderscale", GetNextRSOption())
-					end
-				UiPop()
-				UiTranslate(0, lh)
-				
-				UiPush()
 					UiColor(1,1,0.7)
-					if UiTextButton("Set Render Scale") then
-						SetInt("options.gfx.renderscale", GetInt("TEMP.renderscale"))
-					end
-					UiTranslate(x1, 0)
-					UiAlign("left")
-					if UiTextButton("Reset Render Scale") then
-						SetInt("options.gfx.renderscale", 50)
-						SetInt("TEMP.renderscale", 50)
+					local res = GetInt("options.gfx.renderscale")
+					if res == 100 then
+						if UiTextButton("100%") then		
+							SetInt("options.gfx.renderscale", 75)
+						end
+					elseif res == 75 then
+						if UiTextButton("75%") then		
+							SetInt("options.gfx.renderscale", 50)
+						end
+					else
+						if UiTextButton("50%") then		
+							SetInt("options.gfx.renderscale", 100)
+						end
 					end
 				UiPop()
-				UiTranslate(0, lh * 1.75)
+				UiTranslate(0, lh)
 				
 				UiPush()
 					toolTip("This setting affects the way shadows, reflections and denoising are rendered and affects the performance on most systems.")
@@ -946,7 +780,7 @@ function drawOptions(scale, allowDisplayChanges)
 			end
 		UiPop()
 	UiPop()
-	
+
 	if confirmWipe and confirmWipe > 0 then
 		UiBlur(confirmWipe)
 		UiPush()
@@ -1005,6 +839,7 @@ function drawOptions(scale, allowDisplayChanges)
 		UiPop()
 		UiModalEnd()
 	end
+
 	
 	UiModalEnd()
 	
