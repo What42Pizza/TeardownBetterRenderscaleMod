@@ -269,10 +269,10 @@ function drawOptions(scale, allowDisplayChanges)
 		UiTranslate(UiCenter(), UiMiddle())
 		UiAlign("center middle")
 		UiScale(1, scale)
-		UiWindow(600, 788)
+		UiWindow(640, 788)
 		UiAlign("top left")
 
-		if InputPressed("esc") or (not UiIsMouseInRect(600, 788) and InputPressed("lmb")) then
+		if InputPressed("esc") or (not UiIsMouseInRect(640, 788) and InputPressed("lmb")) then
 			UiSound("common/options-off.ogg")
 			if mapCurInput == "" then
 				open = false
@@ -873,7 +873,7 @@ function drawOptions(scale, allowDisplayChanges)
 				UiPush()
 					UiColor(1, 1, 1, 0.05)
 					UiAlign("center top")
-					UiTranslate(10, -37)
+					UiTranslate(0, -37)
 					UiImageBox("common/box-solid-6.png", 580, 545, 6, 6)
 				UiPop()
 
@@ -902,7 +902,7 @@ function drawOptions(scale, allowDisplayChanges)
 				optionsInputDesc("Map", "Tab", x1, false)
 				optionsInputDesc("Pause", "Esc", x1, false)
 				UiTranslate(0, 20)
-				optionsInputDesc("Change tool", "Mouse wheel or 1-9", x1, false)
+				optionsInputDesc("Change tool", "Mouse wheel or 1-6", x1, false)
 				optionsInputDesc("Use tool", "LMB", x1, false)
 				UiTranslate(0, 20)
 				optionsInputDesc("Grab", "Hold RMB", x1, false)
@@ -1005,7 +1005,7 @@ function drawOptions(scale, allowDisplayChanges)
 		UiPop()
 		UiModalEnd()
 	end
-
+	
 	UiModalEnd()
 	
 	return open
