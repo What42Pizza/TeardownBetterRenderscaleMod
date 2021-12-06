@@ -439,6 +439,23 @@ function drawOptions(scale, allowDisplayChanges)
 					UiPop()
 					UiTranslate(0, lh)
 				end
+				UiPush()
+					UiText("Menu music")
+					UiTranslate(x1, 0)
+					UiAlign("left")
+					UiColor(1,1,0.7)
+					local val = GetInt("options.audio.menumusic")
+					if val == 1 then
+						if UiTextButton("Enabled") then		
+							SetInt("options.audio.menumusic", 0)
+						end
+					else
+						if UiTextButton("Disabled") then		
+							SetInt("options.audio.menumusic", 1)
+						end
+					end
+				UiPop()
+				UiTranslate(0, lh)
 			end
 			
 			if optionsTab == "game" then
