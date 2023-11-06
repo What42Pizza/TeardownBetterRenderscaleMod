@@ -1,17 +1,164 @@
 #include "missions.lua"
 
-function optionsSlider(setting, def, mi, ma)
+
+
+-- Better Render Scale options options:
+
+local SliderMin, SliderMax = 50, 150
+
+local RenderScaleOptions = {
+	1,
+	5,
+	10,
+	25,
+	50,
+	75,
+	100,
+	125,
+	150,
+	175,
+	200,
+	250,
+	300,
+	400,
+	500
+}
+
+
+
+-- returns the highest value that is lower than the current render scale
+function NextLowerRSOption()
+	local Highest = 0
+	local Current = GetInt ("TEMP.renderscale")
+	if Current <= RenderScaleOptions[1] then
+		return RenderScaleOptions[#RenderScaleOptions]
+	end
+	for _,v in ipairs (RenderScaleOptions) do
+		if v < Current then
+			Highest = v
+		else
+			return Highest
+		end
+	end
+end
+
+
+
+-- returns the lowest value that is higher than the current render scale
+function NextHigherRSOption()
+	local Current = GetInt ("TEMP.renderscale")
+	for _,v in ipairs (RenderScaleOptions) do
+		if v > Current then
+			return v
+		end
+	end
+	return RenderScaleOptions[1]
+end
+
+
+
+-- this works just like the original RS button
+function GetNextRSOption()
+	local CurrentRS = GetInt("options.gfx.renderscale")
+	-- goes from highest (100%) to lowest (50%)
+	--[[
+		  0-49 -> 50
+		    50 -> 100
+		 51-75 -> 50
+		76-100 -> 75
+		   100+-> 100
+	--]]
+	if CurrentRS < 50 then
+		return 50
+	elseif CurrentRS == 50 then
+		return 100
+	elseif CurrentRS <= 75 then
+		return 50
+	elseif CurrentRS <= 100 then
+		return 75
+	else
+		return 100
+	end
+end
+
+
+
+
+
+-- intercept SetInt and GetInt to add "TEMP." settings that are stored in TempSettings
+
+local TempSettings = {}
+
+local OrigSetInt = SetInt
+local OrigGetInt = GetInt
+
+SetInt = function (Setting, Value)
+	if Setting:sub(1,5) == "TEMP." then
+		TempSettings [Setting] = Value
+	else
+		OrigSetInt (Setting, Value)
+	end
+end
+
+GetInt = function (Setting)
+	if Setting:sub(1,5) == "TEMP." then
+		return TempSettings [Setting]
+	else
+		return OrigGetInt (Setting)
+	end
+end
+
+
+
+-- set temp to actual renderscale
+SetInt ("TEMP.renderscale", GetInt ("options.gfx.renderscale"))
+
+
+
+
+
+-- misc functions used in optionsSlider
+
+function clamp (Val, Min, Max)
+	return (Val <= Min and Min) or (Val >= Max and max) or Val
+end
+
+function map (Val, InStart, InEnd, OutStart, OutEnd)
+	return (Val - InStart) / (InEnd - InStart) * (OutEnd - OutStart) + OutStart
+end
+
+-- maps Val and clamps it to the output range
+function mapClamp (Val, InStart, InEnd, OutStart, OutEnd)
+	local Mapped = map (Val, InStart, InEnd, OutStart, OutEnd)
+	local Clamped = clamp (Mapped, OutStart, OutEnd)
+	return Clamped
+end
+
+
+
+
+
+
+
+
+
+
+function optionsSlider(setting, def, min, max)
 	UiColor(1,1,0.5)
 	UiPush()
 		UiTranslate(0, -8)
 		local val = GetInt(setting)
-		val = (val-mi) / (ma-mi)
-		local w = 100
-		UiRect(w, 3)
+		val = mapClamp (val, min, max, 0, 1)
+		local width = 100
+		UiRect(width, 3)
 		UiAlign("center middle")
-		val = UiSlider("common/dot.png", "x", val*w, 0, w) / w
-		val = math.floor(val*(ma-mi)+mi)
-		SetInt(setting, val)
+		local valBefore = val
+		val = UiSlider("common/dot.png", "x", val*width, 0, width) / width
+		local valAfter = val
+		val = math.floor(map (val, 0, 1, min, max))
+		if valBefore ~= valAfter then
+			SetInt(setting, val)
+		end
 	UiPop()
 	return val
 end
@@ -127,18 +274,12 @@ function drawOptions(scale, allowDisplayChanges)
 		
 		UiTranslate(UiCenter(), UiMiddle())
 		UiAlign("center middle")
-		
-		local showLargeUI = GetBool("game.largeui")
-		if showLargeUI then
-			UiScale(1.2)
-		end
 		UiScale(1, scale)
 		UiWindow(640, 800)
 		UiAlign("top left")
 
 		if InputPressed("esc") or (not UiIsMouseInRect(640, 800) and InputPressed("lmb")) then
 			UiSound("common/options-off.ogg")
-			Command("hydra.eventSettings")
 			if mapCurInput == "" then
 				open = false
 			end
@@ -271,28 +412,58 @@ function drawOptions(scale, allowDisplayChanges)
 			end
 
 			if optionsTab == "gfx" then
+				
 				UiPush()
-					toolTip("Scale the resolution by this amount when rendering the game. Text overlays will still show in full resolution. Lowering this setting will dramatically increase performance on most systems.")
-					UiText("Render scale")
+					toolTip("This slider doesn't directly control the render scale, and you'll have to click \"Set render scale\" to update the actual render scale.")
+					UiText("Render scale:")
 					UiTranslate(x1, 0)
 					UiAlign("left")
-					UiColor(1,1,0.7)
-					local res = GetInt("options.gfx.renderscale")
-					if res == 100 then
-						if UiTextButton("100%") then		
-							SetInt("options.gfx.renderscale", 75)
-						end
-					elseif res == 75 then
-						if UiTextButton("75%") then		
-							SetInt("options.gfx.renderscale", 50)
-						end
-					else
-						if UiTextButton("50%") then		
-							SetInt("options.gfx.renderscale", 100)
-						end
-					end
+					local val = optionsSlider("TEMP.renderscale", 100, SliderMin, SliderMax)
+					UiTranslate(120, 0)
+					UiText(GetInt("TEMP.renderscale") .. "%")
 				UiPop()
 				UiTranslate(0, lh)
+				
+				UiPush()
+					toolTip("Raise and lower the render scale even further. You can change the values these buttons switch between in data/ui/options.lua")
+					if UiTextButton("Lower") then
+						SetInt("TEMP.renderscale", NextLowerRSOption())
+					end
+					UiTranslate(x1, 0)
+					UiAlign("left")
+					if UiTextButton("Raise") then
+						SetInt("TEMP.renderscale", NextHigherRSOption())
+					end
+				UiPop()
+				UiTranslate(0, lh * 1.25)
+				
+				UiPush()
+					toolTip("Since the slider and buttons above don't change the actual render scale, you'll have to use this to set the render scale or reset it in case it's too laggy.")
+					UiColor(1,1,0.7)
+					if UiTextButton("Set render scale") then
+						SetInt("options.gfx.renderscale", GetInt("TEMP.renderscale"))
+					end
+					UiTranslate(x1, 0)
+					UiAlign("left")
+					if UiTextButton("Reset render scale") then
+						SetInt("TEMP.renderscale", 50)
+						SetInt("options.gfx.renderscale", 50)
+					end
+				UiPop()
+				UiTranslate(0, lh * 1.25)
+				
+				UiPush()
+					toolTip("Scale the resolution by this amount when rendering the game. Text overlays will still show in full resolution. Lowering this setting will dramatically increase performance on most systems.")
+					UiText("Current render scale:")
+					UiTranslate(x1, 0)
+					UiAlign("left")
+					if UiTextButton(GetInt("options.gfx.renderscale") .. "%") then
+						local NextRSOption = GetNextRSOption()
+						SetInt("TEMP.renderscale", NextRSOption)
+						SetInt("options.gfx.renderscale", NextRSOption)
+					end
+				UiPop()
+				UiTranslate(0, lh * 2.25)
 				
 				UiPush()
 					toolTip("This setting affects the way shadows, reflections and denoising are rendered and affects the performance on most systems.")
@@ -465,17 +636,11 @@ function drawOptions(scale, allowDisplayChanges)
 			end
 			
 			if optionsTab == "game" then
-				local showLargeUI = GetBool("game.largeui")
 				UiTranslate(0, -20)
 				UiPush()
 					UiAlign("left")
 					UiTranslate(-200, 0)
-					if showLargeUI then
-						UiFont("regular.ttf", 21)
-					else
-						UiFont("regular.ttf", 20)
-					end
-	
+					UiFont("regular.ttf", 20)
 					UiWordWrap(430)
 					UiText("We have done our best to balance the difficulty in Teardown to what we think is an appropriate level of challenge. If you think the game is too hard, too easy, or just want a more relaxed experience, you can make adjustments here.")
 				UiPop()
@@ -586,8 +751,8 @@ function drawOptions(scale, allowDisplayChanges)
 				UiPop()				
 				UiTranslate(0, lh)
 				UiPush()
-					toolTip("Allow the spawn menu and creative mode at all times, not just on sandbox levels.")
-					UiText("Allow spawn and creative")
+					toolTip("Allow the spawn menu at all times, not just on sandbox levels.")
+					UiText("Allow spawn")
 					UiTranslate(x1, 0)
 					UiAlign("left")
 					UiColor(1,1,0.7)
@@ -695,11 +860,7 @@ function drawOptions(scale, allowDisplayChanges)
 					end
 				UiPop()
 				UiTranslate(0, lh+30)
-				if showLargeUI then
-					UiFont("regular.ttf", 20)
-				else
-					UiFont("regular.ttf", 18)
-				end 
+				UiFont("regular.ttf", 18)
 				UiColor(0.8, 0.8, 0.8, 0.5)
 				UiAlign("center")
 				UiText("Your savegame file is located here:", true)
@@ -788,7 +949,7 @@ function drawOptions(scale, allowDisplayChanges)
 					end
 
 					UiTranslate(0, 10)
-					
+
 					optionsInputDesc("Move forward", "options.input.keymap.forward", x1, true)
 					optionsInputDesc("Move backward", "options.input.keymap.backward", x1, true)
 					optionsInputDesc("Move left", "options.input.keymap.left", x1, true)
@@ -821,7 +982,7 @@ function drawOptions(scale, allowDisplayChanges)
 					local _, height = UiGetRelativePos()
 				UiPop()
 				UiTranslate(0, height)
-				
+
 				UiTranslate(0, UiFontHeight()+10)
 				UiPush()
 					UiText("Gamepad")
