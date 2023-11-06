@@ -274,12 +274,18 @@ function drawOptions(scale, allowDisplayChanges)
 		
 		UiTranslate(UiCenter(), UiMiddle())
 		UiAlign("center middle")
+		
+		local showLargeUI = GetBool("game.largeui")
+		if showLargeUI then
+			UiScale(1.2)
+		end
 		UiScale(1, scale)
 		UiWindow(640, 800)
 		UiAlign("top left")
 
 		if InputPressed("esc") or (not UiIsMouseInRect(640, 800) and InputPressed("lmb")) then
 			UiSound("common/options-off.ogg")
+			Command("hydra.eventSettings")
 			if mapCurInput == "" then
 				open = false
 			end
@@ -412,7 +418,7 @@ function drawOptions(scale, allowDisplayChanges)
 			end
 
 			if optionsTab == "gfx" then
-				
+
 				UiPush()
 					toolTip("This slider doesn't directly control the render scale, and you'll have to click \"Set render scale\" to update the actual render scale.")
 					UiText("Render scale:")
@@ -423,7 +429,7 @@ function drawOptions(scale, allowDisplayChanges)
 					UiText(GetInt("TEMP.renderscale") .. "%")
 				UiPop()
 				UiTranslate(0, lh)
-				
+
 				UiPush()
 					toolTip("Raise and lower the render scale even further. You can change the values these buttons switch between in data/ui/options.lua")
 					if UiTextButton("Lower") then
@@ -436,7 +442,7 @@ function drawOptions(scale, allowDisplayChanges)
 					end
 				UiPop()
 				UiTranslate(0, lh * 1.25)
-				
+
 				UiPush()
 					toolTip("Since the slider and buttons above don't change the actual render scale, you'll have to use this to set the render scale or reset it in case it's too laggy.")
 					UiColor(1,1,0.7)
@@ -451,7 +457,7 @@ function drawOptions(scale, allowDisplayChanges)
 					end
 				UiPop()
 				UiTranslate(0, lh * 1.25)
-				
+
 				UiPush()
 					toolTip("Scale the resolution by this amount when rendering the game. Text overlays will still show in full resolution. Lowering this setting will dramatically increase performance on most systems.")
 					UiText("Current render scale:")
@@ -636,11 +642,17 @@ function drawOptions(scale, allowDisplayChanges)
 			end
 			
 			if optionsTab == "game" then
+				local showLargeUI = GetBool("game.largeui")
 				UiTranslate(0, -20)
 				UiPush()
 					UiAlign("left")
 					UiTranslate(-200, 0)
-					UiFont("regular.ttf", 20)
+					if showLargeUI then
+						UiFont("regular.ttf", 21)
+					else
+						UiFont("regular.ttf", 20)
+					end
+	
 					UiWordWrap(430)
 					UiText("We have done our best to balance the difficulty in Teardown to what we think is an appropriate level of challenge. If you think the game is too hard, too easy, or just want a more relaxed experience, you can make adjustments here.")
 				UiPop()
@@ -751,8 +763,8 @@ function drawOptions(scale, allowDisplayChanges)
 				UiPop()				
 				UiTranslate(0, lh)
 				UiPush()
-					toolTip("Allow the spawn menu at all times, not just on sandbox levels.")
-					UiText("Allow spawn")
+					toolTip("Allow the spawn menu and creative mode at all times, not just on sandbox levels.")
+					UiText("Allow spawn and creative")
 					UiTranslate(x1, 0)
 					UiAlign("left")
 					UiColor(1,1,0.7)
@@ -860,7 +872,11 @@ function drawOptions(scale, allowDisplayChanges)
 					end
 				UiPop()
 				UiTranslate(0, lh+30)
-				UiFont("regular.ttf", 18)
+				if showLargeUI then
+					UiFont("regular.ttf", 20)
+				else
+					UiFont("regular.ttf", 18)
+				end 
 				UiColor(0.8, 0.8, 0.8, 0.5)
 				UiAlign("center")
 				UiText("Your savegame file is located here:", true)
@@ -949,7 +965,7 @@ function drawOptions(scale, allowDisplayChanges)
 					end
 
 					UiTranslate(0, 10)
-
+					
 					optionsInputDesc("Move forward", "options.input.keymap.forward", x1, true)
 					optionsInputDesc("Move backward", "options.input.keymap.backward", x1, true)
 					optionsInputDesc("Move left", "options.input.keymap.left", x1, true)
@@ -982,7 +998,7 @@ function drawOptions(scale, allowDisplayChanges)
 					local _, height = UiGetRelativePos()
 				UiPop()
 				UiTranslate(0, height)
-
+				
 				UiTranslate(0, UiFontHeight()+10)
 				UiPush()
 					UiText("Gamepad")
